@@ -92,6 +92,34 @@ Promises:
 */
 void UserApp1Initialize(void)
 {
+  // Turn on blue left side LED
+  /*LedOn(BLUE0);
+
+  LedToggle(RED3);
+
+  LedBlink(GREEN2, LED_2HZ);
+
+  LedPWM(BLUE1, LED_PWM_5);*/
+
+  // Initialize all LEDs to off.
+  LedOff(RED0);
+  LedOff(BLUE0);
+  LedOff(GREEN0);
+  
+  LedOff(RED1);
+  LedOff(BLUE1);
+  LedOff(GREEN1);
+
+  LedOff(RED2);
+  LedOff(BLUE2);
+  LedOff(GREEN2);
+
+  LedOff(RED3);
+  LedOff(BLUE3);
+  LedOff(GREEN3);
+
+  LedOff(LCD_BL);
+
   /* If good initialization, set state to Idle */
   if( 1 )
   {
@@ -140,7 +168,111 @@ State Machine Function Definitions
 /* What does this state do? */
 static void UserApp1SM_Idle(void)
 {
-     
+  static u16 u16BlinkPeriod = 0;
+  static u8 u8Counter = 0;
+  static u8 u8ColourIndex = 0;
+
+  static u8 u8ColorArray[][3] = {
+    {RED0, 0xff, 0xff},
+    {RED0, GREEN0, 0xff},
+    {0xff, GREEN0, 0xff},
+    {0xff, GREEN0, BLUE0},
+    {0xff, 0xff, BLUE0},
+    {RED0, 0xff, BLUE0},
+    {RED0, GREEN0, BLUE0},
+  };
+
+  // Decrement blink counter
+  u16BlinkPeriod++;
+
+  if (u16BlinkPeriod == 250)
+  {
+    // Toggle blue LED
+    LedToggle(RED3);
+
+    // Reset blink counter
+    u16BlinkPeriod = 0;
+    
+    u8Counter++;
+
+    if (u8Counter == 16){
+        u8Counter = 0;
+    }
+
+    for (u8 i = 0; i < (U8_TOTAL_LEDS - 1); i++){
+      // Converts the integer i to a led in the enumerator. Goes through all and turns them off.
+      LedOff((LedNameType)i);
+    }
+
+    /*if (u8Counter & 0x01){
+      LedOn(RED3);
+    }
+
+    if (u8Counter & 0x02){
+      LedOn(GREEN2);
+    }
+
+    if (u8Counter & 0x04){
+      LedOn(BLUE1);
+    }
+
+    if (u8Counter & 0x08){
+      LedOn(RED0);
+      LedOn(BLUE0);
+    }*/
+
+    
+    // Loop that shows the same functionality but with one colour. The other method may be better/easier to understand though.
+    /*
+    u8 mask = 0x01;
+    LedNameType currentLED = GREEN3;
+
+    while (mask <= 0x08){
+      if (u8Counter & mask){
+        LedOn(currentLED);
+      }
+
+      // Bitwise shift the mask by one. So it goes 0x01 -> 0x02 -> 0x04 -> 0x08 Since 0001 -> 0010 -> 0100 -> 1000
+      mask = mask << 1;
+
+      // Will increment current led to the next LED until it rolls over to the next colour at the first LED.
+      // The loop should be done before this occurs though
+      currentLED--;
+    }
+    */
+
+    // Loop that shows the same functionality but with all colours.
+    u8 mask = 0x01;
+    // The 3rd LED is the furthest right so LSB (Least Significant Bit)
+    u8 currentLEDOffset = 3;
+
+    while (mask <= 0x08){
+      if (u8Counter & mask){
+        // The j < 3 is since there are 3 colours RG and B for each LED
+        for (u8 j = 0; j < 3; j++){
+          if (u8ColorArray[u8ColourIndex][j] != 0xff){
+            // If the colour is actually a colour, turn on that colour. Use the offset to move from the LED0 in the array
+            // to the respective LEDs for each bit.
+            LedNameType test = (u8ColorArray[u8ColourIndex][j]) + currentLEDOffset;
+            LedOn((u8ColorArray[u8ColourIndex][j]) + currentLEDOffset);
+          }
+        }
+      }
+
+      // Bitwise shift the mask by one. So it goes 0x01 -> 0x02 -> 0x04 -> 0x08 Since 0001 -> 0010 -> 0100 -> 1000
+      mask = mask << 1;
+
+      // Will increment current led to the next LED until it rolls over to the next colour at the first LED.
+      // The loop should be done before this occurs though
+      currentLEDOffset--;
+      u8ColourIndex++;
+
+      if (u8ColourIndex > 6){
+        u8ColourIndex = 0;
+      }
+    }
+  }
+
 } /* end UserApp1SM_Idle() */
      
 
