@@ -143,7 +143,7 @@ static void UserApp1SM_Idle(void)
 {
   static u16 u16Counter = U16_COUNTER_PERIOD_MS;
   static bool bLightIsOn = FALSE;
-
+  
   u16Counter--;
   // Decrement the counter every 1ms until it gets to 0.
   if(u16Counter == 0)
