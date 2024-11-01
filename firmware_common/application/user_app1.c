@@ -103,6 +103,8 @@ void UserApp1Initialize(void)
     UserApp1_pfStateMachine = UserApp1SM_Error;
   }
 
+  PWMAudioSetFrequency(BUZZER1, 500);
+
 } /* end UserApp1Initialize() */
 
   
@@ -140,7 +142,85 @@ State Machine Function Definitions
 /* What does this state do? */
 static void UserApp1SM_Idle(void)
 {
-     
+  if(IsButtonPressed(BUTTON0)){
+    PWMAudioOn(BUZZER1);
+  } else {
+    PWMAudioOff(BUZZER1);
+  }
+  
+
+  // static u16 u16Notes[] = {C4, D4, E4, F4, G4, A4, B4, C5};
+
+  // Hedwig's Theme
+  
+  static u16 u16Notes[] = {D4, G4, A4S, A4, G4, D5, C5, A4, G4, A4S, A4, F4, G4S, D4, D4, G4, A4S, A4, 
+  G4, D5, F5, E5, D5S, B4, D5S, D5, C5S, C4S, B4, G4, A4S, D5, A4S, D5, A4S, D5S, D5, C5S, A4, A4S, 
+  D5, C5S, C4S, D4, D5, A4S, D5, A4S, F5, E5, D5S, B4, D5S, D5, C5S, C4S, A4S, G4};
+  
+
+  // Hall of the mountain king Doesn't work very well
+  /*static u16 u16Notes[] = {D3, E3, F3, G3, A3, F3, A3, G3S, E3, G3S, G3, E3, G3, D3, E3, F3, 
+  G3, A3, F3, A3, D4, C4, A3, F3, A3, C4, D3, E3, F3, G3, A3, F3, A3, G3S, E3, G3S, G3, E3, G3, 
+  D3, E3, F3, G3, A3, F3, A3, D4, C4, A3, F3, A3, C4, A3, B3, C4S, D4, E4, C4, E4, F4, C4S, F4, E4, 
+  C4, E4, A3, B3, C4S, D4, E4, C4, E4, F4, C4S, F4, E4, A3, B3, C4S, D4, E4, C4, E4, F4, C4S, F4, E4, 
+  C4, E4, A3, B3, C4S, D4, E4, C4, E4, F4, C4S, F4, E4, D3, E3, F3, G3, A3, F3, A3, G3S, E3, G3S, G3, 
+  E3, G3, D3, E3, F3, G3, A3, F3, A3, D4, C4, A3, F3, E3, D3};*/
+
+  // Pink Panther
+  /*
+  static u16 u16Notes[] = {D4S, E4, F4S, G4, D4S, E4, F4S, G4, C5, B4, E4, G4, B4, A4S, A4, G4, E4, D4, E4, D4S, E4, F4S, G4, D4S, E4, F4S,
+   G4, C5, B4, G4, B4, E5, D5S, D5, D4S, E4, F4S, G4, D4S, E4, F4S, G4, C5, B4, E4, G4, B4, A4S, A4,
+    G4, E4, D4, E4, E5, D5, B4, A4, G4, E4, A4S, A4, A4S, A4, A4S, A4, A4S, A4, G4, E4, D4, E4, E4, E4};
+  */
+
+  // Star Wars Cantina
+  /*
+  static u16 u16Notes[] = {B4, E5, B4, E5, B4, E5, B4, A4S, B4, B4, A4S, B4, A4S, G4S, A4S, G4S, G4S, 
+  E4, B4, E5, B4, E5, B4, E5, B4, A4S, B4, A4S, A4S, G4S, A4S, D5S, C5S, B4, A4S, B4, E5, B4, E5, B4, 
+  E5, B4, A4S, B4, D5S, D5S, B4, A4S, G4S, E4, E4, G4S, B4, D5S, F5S, E5, A4S, A4S, B4, G4S};
+  */
+
+  // Imperial March
+  /*
+  static u16 u16Notes[] = {A4S, A4S, A4S, A4S, A4S, A4S, F4S, A4S, A4S, A4S, A4S, A4S,
+   A4S, F4S, A4S, A4S, A4S, F4S, C5S, A4S, F4S, C5S, A4S, E5, E5, E5, F5S, C5S, A4S, F4S
+   , C5S, A4S, A5S, A4S, A4S, A5S, G5S, G5S, D5S, D5S, D5S, A4S, D5S, D5S, C5S, C5S, B4, C5S, F4S, G4S, F4S, A4S, C5S, A4S
+   , C5S, E5, A5S, A4S, A4S, A5S, G5S, G5S, D5S, D5S, D5S, A4S, D5S, D5S, C5S, C5S, B4, C5S, 
+   F4S, G4S, F4S, A4S, A4S, F4S, C5S, A4S};
+  */
+
+  static u8 u8NoteIndex = 0;
+  static bool goingUp = TRUE;
+
+  if(WasButtonPressed(BUTTON1)){
+    ButtonAcknowledge(BUTTON1);
+
+    if (goingUp) 
+      u8NoteIndex++;
+    else 
+      u8NoteIndex--;
+
+    if(u8NoteIndex == (u8)(sizeof(u16Notes) / sizeof(u16))){
+      //u8NoteIndex = 0;
+
+      // If it equals the max value of index, go back down
+      goingUp = FALSE;
+      u8NoteIndex--;
+    } else if (u8NoteIndex == 0){
+      // If it is the min, go back up
+      goingUp = TRUE;
+    }
+
+    PWMAudioSetFrequency(BUZZER1, u16Notes[u8NoteIndex]);
+  }
+
+  if (IsButtonHeld(BUTTON1, 2000)){
+    LedOn(RED1);
+    u8NoteIndex = 0;
+    goingUp = TRUE;
+    LedOff(RED1);
+  }
+
 } /* end UserApp1SM_Idle() */
      
 
