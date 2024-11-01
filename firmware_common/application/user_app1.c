@@ -103,6 +103,11 @@ void UserApp1Initialize(void)
     UserApp1_pfStateMachine = UserApp1SM_Error;
   }
 
+  for(u8 i = 0; i < U8_TOTAL_LEDS; i++)
+  {
+    LedOff((LedNameType) i);
+  }
+
 } /* end UserApp1Initialize() */
 
   
@@ -140,7 +145,71 @@ State Machine Function Definitions
 /* What does this state do? */
 static void UserApp1SM_Idle(void)
 {
-     
+  if (IsButtonPressed(BUTTON0)){
+    LedOn(BLUE0);
+  } else {
+    LedOff(BLUE0);
+  }
+
+  static bool bRed1Blink = FALSE;
+
+  // Toggles the red led to blink if the right button is pressed
+  /*
+  if (WasButtonPressed(BUTTON1)){
+    ButtonAcknowledge(BUTTON1);
+
+    if(!bRed1Blink){
+      bRed1Blink = TRUE;
+      LedBlink(RED1, LED_1HZ);
+    } else {
+      bRed1Blink = FALSE;
+      LedOff(RED1);
+    }
+  }
+  */
+
+  // Turns on the backlight when the left button is held for 2 seconds
+  if (IsButtonHeld(BUTTON0, 2000)){
+    LedOn(LCD_BL);
+  } else {
+    LedOff(LCD_BL);
+  }
+
+  // Control blink rate of red led with right button
+  static LedRateType BlinkRate[] = {LED_1HZ, LED_2HZ, LED_4HZ, LED_8HZ};
+  static u8 u8BlinkRateIndex = 0;
+
+  if (WasButtonPressed(BUTTON1)){
+    ButtonAcknowledge(BUTTON1);
+
+    if(!bRed1Blink){
+      bRed1Blink = TRUE;
+      LedBlink(RED1, BlinkRate[u8BlinkRateIndex]);
+
+      // Make sure there are no pending button0 presses that would change the rate.
+      // If you are changing it to be on or off, but the button0 has a press, it could turn it back on
+      // or immediately change the rate faster. This way, we ignore any previous button0 presses.
+      ButtonAcknowledge(BUTTON0);
+    } else {
+      bRed1Blink = FALSE;
+      LedOff(RED1);
+    }
+  }
+
+  if (WasButtonPressed(BUTTON0) && bRed1Blink){
+    ButtonAcknowledge(BUTTON0);
+
+    u8BlinkRateIndex++;
+
+    // If it goes above the # of rates in BlinkRate, reset it to 0
+    if(u8BlinkRateIndex == (sizeof(BlinkRate) / sizeof(LedRateType))){
+      u8BlinkRateIndex = 0;
+    }
+
+    // Update the led to blink at the new rate.
+    LedBlink(RED1, BlinkRate[u8BlinkRateIndex]);
+  }
+
 } /* end UserApp1SM_Idle() */
      
 
