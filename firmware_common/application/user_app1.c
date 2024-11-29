@@ -61,6 +61,17 @@ Variable names shall start with "UserApp1_<type>" and be declared as static.
 ***********************************************************************************************************************/
 static fnCode_type UserApp1_pfStateMachine;               /*!< @brief The state machine function pointer */
 //static u32 UserApp1_u32Timeout;                           /*!< @brief Timeout counter used across states */
+static u8 UserApp1_au8Name[] = "Ayden";
+static u8 UserApp1_RowList[] = {U8_LCD_SMALL_FONT_LINE0,
+                       U8_LCD_SMALL_FONT_LINE1,
+                       U8_LCD_SMALL_FONT_LINE2,
+                       U8_LCD_SMALL_FONT_LINE3,
+                       U8_LCD_SMALL_FONT_LINE4,
+                       U8_LCD_SMALL_FONT_LINE5,
+                       U8_LCD_SMALL_FONT_LINE6,
+                       U8_LCD_SMALL_FONT_LINE7
+                      };
+static int UserApp1_NumRows = 7;
 
 
 /**********************************************************************************************************************
@@ -103,6 +114,12 @@ void UserApp1Initialize(void)
     UserApp1_pfStateMachine = UserApp1SM_Error;
   }
 
+  // Clear the Display initially
+  LcdClearScreen();
+
+  PixelAddressType nameLocation = {U16_LCD_TOP_MOST_ROW, U16_LCD_LEFT_MOST_COLUMN};  
+  LcdLoadString(UserApp1_au8Name, LCD_FONT_SMALL, &nameLocation);
+
 } /* end UserApp1Initialize() */
 
   
@@ -140,7 +157,37 @@ State Machine Function Definitions
 /* What does this state do? */
 static void UserApp1SM_Idle(void)
 {
-     
+  static int curRow = 0;
+
+  if (WasButtonPressed(BUTTON0)){
+    ButtonAcknowledge(BUTTON0);
+
+    LcdClearScreen();
+
+    curRow++;
+
+    if (curRow > UserApp1_NumRows){
+      curRow = 0;
+    } 
+
+    PixelAddressType nameLocation = {UserApp1_RowList[curRow], U16_LCD_LEFT_MOST_COLUMN};  
+    LcdLoadString(UserApp1_au8Name, LCD_FONT_SMALL, &nameLocation);
+  }
+
+    if (WasButtonPressed(BUTTON1)){
+    ButtonAcknowledge(BUTTON1);
+
+    LcdClearScreen();
+
+    curRow--;
+
+    if (curRow < 0){
+      curRow = UserApp1_NumRows;
+    } 
+
+    PixelAddressType nameLocation = {UserApp1_RowList[curRow], U16_LCD_LEFT_MOST_COLUMN};  
+    LcdLoadString(UserApp1_au8Name, LCD_FONT_SMALL, &nameLocation);
+  }
 } /* end UserApp1SM_Idle() */
      
 
