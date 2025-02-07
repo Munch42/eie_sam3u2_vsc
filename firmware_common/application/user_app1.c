@@ -72,6 +72,7 @@ static u8 UserApp1_RowList[] = {U8_LCD_SMALL_FONT_LINE0,
                        U8_LCD_SMALL_FONT_LINE7
                       };
 static int UserApp1_NumRows = 7;
+const u16 U16_ANIM_PERIODMS = 50; // Period between animation updates
 
 
 /**********************************************************************************************************************
@@ -117,8 +118,8 @@ void UserApp1Initialize(void)
   // Clear the Display initially
   LcdClearScreen();
 
-  PixelAddressType nameLocation = {U16_LCD_TOP_MOST_ROW, U16_LCD_LEFT_MOST_COLUMN};  
-  LcdLoadString(UserApp1_au8Name, LCD_FONT_SMALL, &nameLocation);
+  //PixelAddressType nameLocation = {U16_LCD_TOP_MOST_ROW, U16_LCD_LEFT_MOST_COLUMN};  
+  //LcdLoadString(UserApp1_au8Name, LCD_FONT_SMALL, &nameLocation);
 
 } /* end UserApp1Initialize() */
 
@@ -157,7 +158,76 @@ State Machine Function Definitions
 /* What does this state do? */
 static void UserApp1SM_Idle(void)
 {
-  static int curRow = 0;
+  PixelBlockType sEngenuicsImage;
+  PixelBlockType G_sLcdClearWholeScreen = 
+  {
+    .u16RowStart = 0,
+    .u16ColumnStart = 0,
+    .u16RowSize = U16_LCD_ROWS,
+    .u16ColumnSize = U16_LCD_COLUMNS
+  };
+
+  extern const u8 aau8EngenuicsLogoBlackQ1[U8_LCD_IMAGE_ROW_SIZE_25PX][U8_LCD_IMAGE_COL_BYTES_25PX];
+
+  static u8 u8RowPosition = 0;
+
+  static int anim_increment = 0;
+  static u16 counter = U16_ANIM_PERIODMS;
+
+  counter--;
+
+  if (anim_increment <= 40 && counter == 0){
+    LcdClearPixels(&G_sLcdClearWholeScreen);
+    // Reset the 500ms counter
+    counter = U16_ANIM_PERIODMS;
+
+    // Slide in from left
+    sEngenuicsImage.u16RowStart = U16_LCD_ROWS - 25;
+    sEngenuicsImage.u16ColumnStart = anim_increment;
+    sEngenuicsImage.u16RowSize = 25;
+    sEngenuicsImage.u16ColumnSize = 25;
+    LcdLoadBitmap(&aau8EngenuicsLogoBlackQ1[0][0], &sEngenuicsImage);
+
+    /*
+    // Top right 
+    sEngenuicsImage.u16RowStart = 0;
+    sEngenuicsImage.u16ColumnStart = U16_LCD_COLUMNS - 25 - anim_increment;
+    LcdLoadBitmap(&aau8EngenuicsLogoBlackQ1[0][0], &sEngenuicsImage);
+
+    // Bottom left 
+    sEngenuicsImage.u16RowStart = U16_LCD_ROWS - 25 - u8RowPosition;
+    sEngenuicsImage.u16ColumnStart = anim_increment;
+    LcdLoadBitmap(&aau8EngenuicsLogoBlackQ1[0][0], &sEngenuicsImage);
+    
+    // Bottom right 
+    sEngenuicsImage.u16RowStart = U16_LCD_ROWS - 25 - u8RowPosition;
+    sEngenuicsImage.u16ColumnStart = U16_LCD_COLUMNS - 25 - anim_increment;
+    LcdLoadBitmap(&aau8EngenuicsLogoBlackQ1[0][0], &sEngenuicsImage);
+    */
+
+    LcdManualMode();
+        
+    /* Adjust the row by one every few iterations */
+    if( (anim_increment % 3) == 0)
+    {
+      u8RowPosition++;
+      /* On the last iteration set, adjust one more row to bring the icon together */
+      if(u8RowPosition == 13)
+      {
+        u8RowPosition = 14;
+      }
+    }
+
+    anim_increment++;
+  } 
+
+  if (WasButtonPressed(BUTTON1)){
+    ButtonAcknowledge(BUTTON1);
+    anim_increment = 39;
+    UserApp1_pfStateMachine = UserApp1SM_Jump;
+  }
+
+  /*static int curRow = 0;
 
   if (WasButtonPressed(BUTTON0)){
     ButtonAcknowledge(BUTTON0);
@@ -186,10 +256,68 @@ static void UserApp1SM_Idle(void)
     } 
 
     PixelAddressType nameLocation = {UserApp1_RowList[curRow], U16_LCD_LEFT_MOST_COLUMN};  
-    LcdLoadString(UserApp1_au8Name, LCD_FONT_SMALL, &nameLocation);
-  }
+    LcdLoadString(UserApp1_au8Name, LCD_FONT_SMALL, &nameLocation);*//*
+  }*/
 } /* end UserApp1SM_Idle() */
      
+static void UserApp1SM_Jump(void){
+  PixelBlockType sEngenuicsImage;
+  PixelBlockType G_sLcdClearWholeScreen = 
+  {
+    .u16RowStart = 0,
+    .u16ColumnStart = 0,
+    .u16RowSize = U16_LCD_ROWS,
+    .u16ColumnSize = U16_LCD_COLUMNS
+  };
+
+  extern const u8 aau8EngenuicsLogoBlackQ1[U8_LCD_IMAGE_ROW_SIZE_25PX][U8_LCD_IMAGE_COL_BYTES_25PX];
+
+  static u8 u8RowPosition = 0;
+
+  static int anim_increment = 0;
+  static int anim_increment2 = 0;
+  static u16 counter = U16_ANIM_PERIODMS;
+
+  counter--;
+
+  if (anim_increment <= 20 && counter == 0){
+    LcdClearPixels(&G_sLcdClearWholeScreen);
+    // Reset the 500ms counter
+    counter = U16_ANIM_PERIODMS;
+
+    sEngenuicsImage.u16RowStart = U16_LCD_ROWS - 25 - anim_increment;
+    sEngenuicsImage.u16ColumnStart = 40;
+    sEngenuicsImage.u16RowSize = 25;
+    sEngenuicsImage.u16ColumnSize = 25;
+    LcdLoadBitmap(&aau8EngenuicsLogoBlackQ1[0][0], &sEngenuicsImage);
+
+    LcdManualMode();
+
+    anim_increment++;
+  } 
+
+  if (anim_increment2 <= 20 && counter == 0){
+    LcdClearPixels(&G_sLcdClearWholeScreen);
+
+    counter = U16_ANIM_PERIODMS;
+
+    sEngenuicsImage.u16RowStart = (U16_LCD_ROWS - 25 - anim_increment) + anim_increment2;
+    sEngenuicsImage.u16ColumnStart = 40;
+    sEngenuicsImage.u16RowSize = 25;
+    sEngenuicsImage.u16ColumnSize = 25;
+    LcdLoadBitmap(&aau8EngenuicsLogoBlackQ1[0][0], &sEngenuicsImage);
+
+    LcdManualMode();
+
+    anim_increment2++;
+  }
+
+  if (anim_increment >= 20 && anim_increment2 >= 20){
+    UserApp1_pfStateMachine = UserApp1SM_Idle;
+    anim_increment = 0;
+    anim_increment2 = 0;
+  }
+}
 
 /*-------------------------------------------------------------------------------------------------------------------*/
 /* Handle an error */
