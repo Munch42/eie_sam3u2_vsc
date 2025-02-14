@@ -156,16 +156,49 @@ State Machine Function Definitions
 **********************************************************************************************************************/
 /*-------------------------------------------------------------------------------------------------------------------*/
 /* What does this state do? */
+
+// drawAll when true will draw all the saved bitmaps at their saved positions and clears the queue for the next draw cycle.
+static void UserApp1_Draw(bool drawAll, u8* bitmap, PixelBlockType* bitmapSize) {
+  static u8 arrayLen = 0;
+  static u8* bitmaps[100] = {};
+  static PixelBlockType* bitmapSizes[100] = {};
+
+  if (!drawAll) {
+    // If not drawing to screen, add the given data to the arrays
+    bitmaps[arrayLen] = bitmap;
+    bitmapSizes[arrayLen] = bitmapSize;
+    arrayLen++;
+  } else {
+    // Draw all to screen and reset arrays to empty.
+    bitmaps[arrayLen] = bitmap;
+    bitmapSizes[arrayLen] = bitmapSize;
+    arrayLen++;
+
+    // Clear Screen Once
+    PixelBlockType G_sLcdClearWholeScreen = 
+    {
+      .u16RowStart = 0,
+      .u16ColumnStart = 0,
+      .u16RowSize = U16_LCD_ROWS,
+      .u16ColumnSize = U16_LCD_COLUMNS
+    };
+
+    LcdClearPixels(&G_sLcdClearWholeScreen);
+
+    // Loop through the arrays and print everything to the screen.
+    for (int i = 0; i < arrayLen; i++){
+      LcdLoadBitmap(bitmaps[i], bitmapSizes[i]);
+      bitmaps[i] = 0;
+      bitmapSizes[i] = 0;
+    }
+
+    arrayLen = 0;
+  }
+}
+
 static void UserApp1SM_Idle(void)
 {
   PixelBlockType sEngenuicsImage;
-  PixelBlockType G_sLcdClearWholeScreen = 
-  {
-    .u16RowStart = 0,
-    .u16ColumnStart = 0,
-    .u16RowSize = U16_LCD_ROWS,
-    .u16ColumnSize = U16_LCD_COLUMNS
-  };
 
   extern const u8 aau8EngenuicsLogoBlackQ1[U8_LCD_IMAGE_ROW_SIZE_25PX][U8_LCD_IMAGE_COL_BYTES_25PX];
 
@@ -177,7 +210,6 @@ static void UserApp1SM_Idle(void)
   counter--;
 
   if (anim_increment <= 40 && counter == 0){
-    LcdClearPixels(&G_sLcdClearWholeScreen);
     // Reset the 500ms counter
     counter = U16_ANIM_PERIODMS;
 
@@ -186,7 +218,7 @@ static void UserApp1SM_Idle(void)
     sEngenuicsImage.u16ColumnStart = anim_increment;
     sEngenuicsImage.u16RowSize = 25;
     sEngenuicsImage.u16ColumnSize = 25;
-    LcdLoadBitmap(&aau8EngenuicsLogoBlackQ1[0][0], &sEngenuicsImage);
+    UserApp1_Draw(TRUE, &aau8EngenuicsLogoBlackQ1[0][0], &sEngenuicsImage);
 
     /*
     // Top right 
@@ -224,8 +256,12 @@ static void UserApp1SM_Idle(void)
   if (WasButtonPressed(BUTTON1)){
     ButtonAcknowledge(BUTTON1);
     anim_increment = 39;
-    UserApp1_pfStateMachine = UserApp1SM_Jump;
+    //UserApp1_pfStateMachine = UserApp1SM_Jump;
+  } else if (anim_increment >= 40) {
+    //UserApp1_pfStateMachine = UserApp1SM_MoveBackground;
   }
+
+
 
   /*static int curRow = 0;
 
@@ -289,7 +325,7 @@ static void UserApp1SM_Jump(void){
     sEngenuicsImage.u16ColumnStart = 40;
     sEngenuicsImage.u16RowSize = 25;
     sEngenuicsImage.u16ColumnSize = 25;
-    LcdLoadBitmap(&aau8EngenuicsLogoBlackQ1[0][0], &sEngenuicsImage);
+    UserApp1_Draw(TRUE, &aau8EngenuicsLogoBlackQ1[0][0], &sEngenuicsImage);
 
     LcdManualMode();
 
@@ -305,7 +341,7 @@ static void UserApp1SM_Jump(void){
     sEngenuicsImage.u16ColumnStart = 40;
     sEngenuicsImage.u16RowSize = 25;
     sEngenuicsImage.u16ColumnSize = 25;
-    LcdLoadBitmap(&aau8EngenuicsLogoBlackQ1[0][0], &sEngenuicsImage);
+    UserApp1_Draw(TRUE, &aau8EngenuicsLogoBlackQ1[0][0], &sEngenuicsImage);
 
     LcdManualMode();
 
@@ -316,6 +352,56 @@ static void UserApp1SM_Jump(void){
     UserApp1_pfStateMachine = UserApp1SM_Idle;
     anim_increment = 0;
     anim_increment2 = 0;
+  }
+}
+
+static void UserApp1SM_MoveBackground(void) {
+  PixelBlockType sEngenuicsImage;
+  PixelBlockType sEngenuicsImageStationary;
+  PixelBlockType G_sLcdClearWholeScreen = 
+  {
+    .u16RowStart = 0,
+    .u16ColumnStart = 0,
+    .u16RowSize = U16_LCD_ROWS,
+    .u16ColumnSize = U16_LCD_COLUMNS
+  };
+
+  extern const u8 aau8EngenuicsLogoBlackQ1[U8_LCD_IMAGE_ROW_SIZE_25PX][U8_LCD_IMAGE_COL_BYTES_25PX];
+
+  static u8 u8RowPosition = 0;
+
+  static int anim_increment = 0;
+  static int anim_increment2 = 0;
+  static u16 counter = U16_ANIM_PERIODMS;
+
+  counter--;
+
+  if (anim_increment <= 20 && counter == 0){
+    LcdClearPixels(&G_sLcdClearWholeScreen);
+    // Reset the 500ms counter
+    counter = U16_ANIM_PERIODMS;
+
+    sEngenuicsImageStationary.u16RowStart = U16_LCD_ROWS - 25;
+    sEngenuicsImageStationary.u16ColumnStart = 50;
+    sEngenuicsImageStationary.u16RowSize = 25;
+    sEngenuicsImageStationary.u16ColumnSize = 25;
+
+    UserApp1_Draw(FALSE, &aau8EngenuicsLogoBlackQ1[0][0], &sEngenuicsImageStationary);
+
+    sEngenuicsImage.u16RowStart = U16_LCD_ROWS - 25;
+    sEngenuicsImage.u16ColumnStart = U16_LCD_COLUMNS - 25 - anim_increment;
+    sEngenuicsImage.u16RowSize = 25;
+    sEngenuicsImage.u16ColumnSize = 25;
+    UserApp1_Draw(TRUE, &aau8EngenuicsLogoBlackQ1[0][0], &sEngenuicsImage);
+
+    LcdManualMode();
+
+    anim_increment++;
+  } 
+  
+  if (anim_increment >= 20){
+    UserApp1_pfStateMachine = UserApp1SM_Idle;
+    anim_increment = 0;
   }
 }
 

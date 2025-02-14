@@ -50,6 +50,8 @@ State Machine Declarations
 static void UserApp1SM_Idle(void);    
 static void UserApp1SM_Error(void);         
 static void UserApp1SM_Jump(void);
+static void UserApp1SM_MoveBackground(void);
+static void UserApp1_Draw(bool, u8*, PixelBlockType*);
 
 
 /**********************************************************************************************************************
