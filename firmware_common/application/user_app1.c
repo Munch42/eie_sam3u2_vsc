@@ -72,7 +72,10 @@ static u8 UserApp1_RowList[] = {U8_LCD_SMALL_FONT_LINE0,
                        U8_LCD_SMALL_FONT_LINE7
                       };
 static int UserApp1_NumRows = 7;
-const u16 U16_ANIM_PERIODMS = 50; // Period between animation updates
+const u16 U16_ANIM_INTRO_PERIODMS = 75; // Period between animation updates
+const u16 U16_ANIM_JUMP_PERIODMS = 75; // Period between animation updates
+const u16 U16_ANIM_PERIODMS = 200; // Period between animation updates
+const u16 U16_ANIM_GAMELOOP_PERIODMS = 75; // Period between animation updates
 
 
 /**********************************************************************************************************************
@@ -107,7 +110,7 @@ void UserApp1Initialize(void)
   /* If good initialization, set state to Idle */
   if( 1 )
   {
-    UserApp1_pfStateMachine = UserApp1SM_Idle;
+    UserApp1_pfStateMachine = UserApp1SM_Intro;
   }
   else
   {
@@ -170,20 +173,14 @@ static void UserApp1_Draw(bool drawAll, u8* bitmap, PixelBlockType* bitmapSize) 
     arrayLen++;
   } else {
     // Draw all to screen and reset arrays to empty.
-    bitmaps[arrayLen] = bitmap;
-    bitmapSizes[arrayLen] = bitmapSize;
-    arrayLen++;
+    if (bitmap != NULL && bitmapSize != NULL){
+      // If this is not simply a call to actually draw everything, then add the final thing to draw before drawing here.
+      bitmaps[arrayLen] = bitmap;
+      bitmapSizes[arrayLen] = bitmapSize;
+      arrayLen++;
+    } 
 
-    // Clear Screen Once
-    PixelBlockType G_sLcdClearWholeScreen = 
-    {
-      .u16RowStart = 0,
-      .u16ColumnStart = 0,
-      .u16RowSize = U16_LCD_ROWS,
-      .u16ColumnSize = U16_LCD_COLUMNS
-    };
-
-    LcdClearPixels(&G_sLcdClearWholeScreen);
+    LcdClearScreen();
 
     // Loop through the arrays and print everything to the screen.
     for (int i = 0; i < arrayLen; i++){
@@ -196,48 +193,27 @@ static void UserApp1_Draw(bool drawAll, u8* bitmap, PixelBlockType* bitmapSize) 
   }
 }
 
-static void UserApp1SM_Idle(void)
-{
+static void UserApp1SM_Intro() {
   PixelBlockType sEngenuicsImage;
-
+  static u8 u8RowPosition = 0;
+  
   extern const u8 aau8EngenuicsLogoBlackQ1[U8_LCD_IMAGE_ROW_SIZE_25PX][U8_LCD_IMAGE_COL_BYTES_25PX];
 
-  static u8 u8RowPosition = 0;
-
   static int anim_increment = 0;
-  static u16 counter = U16_ANIM_PERIODMS;
+  static u16 counter = U16_ANIM_INTRO_PERIODMS;
 
   counter--;
 
   if (anim_increment <= 40 && counter == 0){
-    // Reset the 500ms counter
-    counter = U16_ANIM_PERIODMS;
+    // Reset the anim counter so that in another time period the next anim frame runs.
+    counter = U16_ANIM_INTRO_PERIODMS;
 
     // Slide in from left
     sEngenuicsImage.u16RowStart = U16_LCD_ROWS - 25;
     sEngenuicsImage.u16ColumnStart = anim_increment;
     sEngenuicsImage.u16RowSize = 25;
     sEngenuicsImage.u16ColumnSize = 25;
-    UserApp1_Draw(TRUE, &aau8EngenuicsLogoBlackQ1[0][0], &sEngenuicsImage);
-
-    /*
-    // Top right 
-    sEngenuicsImage.u16RowStart = 0;
-    sEngenuicsImage.u16ColumnStart = U16_LCD_COLUMNS - 25 - anim_increment;
-    LcdLoadBitmap(&aau8EngenuicsLogoBlackQ1[0][0], &sEngenuicsImage);
-
-    // Bottom left 
-    sEngenuicsImage.u16RowStart = U16_LCD_ROWS - 25 - u8RowPosition;
-    sEngenuicsImage.u16ColumnStart = anim_increment;
-    LcdLoadBitmap(&aau8EngenuicsLogoBlackQ1[0][0], &sEngenuicsImage);
-    
-    // Bottom right 
-    sEngenuicsImage.u16RowStart = U16_LCD_ROWS - 25 - u8RowPosition;
-    sEngenuicsImage.u16ColumnStart = U16_LCD_COLUMNS - 25 - anim_increment;
-    LcdLoadBitmap(&aau8EngenuicsLogoBlackQ1[0][0], &sEngenuicsImage);
-    */
-
-    LcdManualMode();
+    UserApp1_Draw(TRUE, aau8EngenuicsLogoBlackQ1, &sEngenuicsImage);
         
     /* Adjust the row by one every few iterations */
     if( (anim_increment % 3) == 0)
@@ -252,16 +228,77 @@ static void UserApp1SM_Idle(void)
 
     anim_increment++;
   } 
-
-  if (WasButtonPressed(BUTTON1)){
-    ButtonAcknowledge(BUTTON1);
-    anim_increment = 39;
-    //UserApp1_pfStateMachine = UserApp1SM_Jump;
-  } else if (anim_increment >= 40) {
-    //UserApp1_pfStateMachine = UserApp1SM_MoveBackground;
+  
+  if (anim_increment > 40) {
+    UserApp1_pfStateMachine = UserApp1SM_GameLoop;
   }
+}
 
+static void UserApp1SM_GameLoop(void)
+{
+  /*
+  Potentially wrap this whole thing in a counter like jump or intro so that it only draws once every say 50ms. Once every 50ms, it would
+  call the jump function which would increment its anim counter and it would add the new frame to draw to the screen. 
+  Then potentially draw all of those to the screen. See if that still violates timing
 
+  A further fix/idea is to have a function that takes the bitmaps and the PixelBlockTypes and scales up the bitmap to the size of the screen,
+  positioning it based on the PixelBlockType and setting all other bits to 0. 
+  Then, treat each of these as a layer and loop through each pixel in the screen for each bitmap and if one is on, write it to the final
+  bitmap that will be drawn to the screen. Could use this to say if two or more are on, should they be overlapping? That would be
+  a collision so potentially they lose etc.
+
+  Use srand to seed the random thing once I think. Then use rand to get random numbers
+  */
+  
+  extern const u8 aau8EngenuicsLogoBlackQ1[U8_LCD_IMAGE_ROW_SIZE_25PX][U8_LCD_IMAGE_COL_BYTES_25PX];
+
+  static u16 counter = U16_ANIM_GAMELOOP_PERIODMS;
+
+  counter--;
+
+  static jumping = FALSE;
+
+  if (counter == 0) {
+    // This will run once every period. In here, call the functions to draw things for example if they are jumping and then
+    // draw everything at the end.
+    counter = U16_ANIM_GAMELOOP_PERIODMS;
+
+    PixelBlockType sEngenuicsImage;
+    
+
+    if (WasButtonPressed(BUTTON1)) {
+      if (jumping == FALSE) {
+        jumping = TRUE;
+        ButtonAcknowledge(BUTTON1);
+      } else {
+        // They are already jumping so don't queue up a jump
+        ButtonAcknowledge(BUTTON1);
+      }
+    }
+    
+    if (jumping) {
+      UserApp1_Jump(&jumping);
+      /*PixelBlockType sEngenuicsImage2;
+      sEngenuicsImage2.u16RowStart = U16_LCD_ROWS - 25;
+      sEngenuicsImage2.u16ColumnStart = 25;
+      sEngenuicsImage2.u16RowSize = 25;
+      sEngenuicsImage2.u16ColumnSize = 25;
+      UserApp1_Draw(TRUE, &aau8EngenuicsLogoBlackQ1[0][0], &sEngenuicsImage2);*/
+    } else {
+      PixelBlockType sEngenuicsImage2;
+      // If not jumping, draw the character at the default position.
+      sEngenuicsImage2.u16RowStart = U16_LCD_ROWS - 25;
+      sEngenuicsImage2.u16ColumnStart = 40;
+      sEngenuicsImage2.u16RowSize = 25;
+      sEngenuicsImage2.u16ColumnSize = 25;
+      UserApp1_Draw(FALSE, &aau8EngenuicsLogoBlackQ1[0][0], &sEngenuicsImage2);
+    }
+
+    UserApp1_MoveBackground();
+
+    // A Draw call to draw everything 
+    UserApp1_Draw(TRUE, NULL, NULL);
+  }
 
   /*static int curRow = 0;
 
@@ -296,15 +333,9 @@ static void UserApp1SM_Idle(void)
   }*/
 } /* end UserApp1SM_Idle() */
      
-static void UserApp1SM_Jump(void){
-  PixelBlockType sEngenuicsImage;
-  PixelBlockType G_sLcdClearWholeScreen = 
-  {
-    .u16RowStart = 0,
-    .u16ColumnStart = 0,
-    .u16RowSize = U16_LCD_ROWS,
-    .u16ColumnSize = U16_LCD_COLUMNS
-  };
+static void UserApp1_Jump(bool* jumping){
+  static PixelBlockType sEngenuicsImage;
+  static PixelBlockType sEngenuicsImage2;
 
   extern const u8 aau8EngenuicsLogoBlackQ1[U8_LCD_IMAGE_ROW_SIZE_25PX][U8_LCD_IMAGE_COL_BYTES_25PX];
 
@@ -312,97 +343,87 @@ static void UserApp1SM_Jump(void){
 
   static int anim_increment = 0;
   static int anim_increment2 = 0;
-  static u16 counter = U16_ANIM_PERIODMS;
 
-  counter--;
+/*  static u16 counter = U16_ANIM_JUMP_PERIODMS;
 
-  if (anim_increment <= 20 && counter == 0){
-    LcdClearPixels(&G_sLcdClearWholeScreen);
-    // Reset the 500ms counter
-    counter = U16_ANIM_PERIODMS;
+  counter--;*/
+
+  if (anim_increment <= 30 /*&& counter == 0*/){
+    // Reset the counter
+    //counter = U16_ANIM_JUMP_PERIODMS;
+
+    sEngenuicsImage2.u16RowStart = U16_LCD_ROWS - 25;
+    sEngenuicsImage2.u16ColumnStart = U16_LCD_COLUMNS - 25 - anim_increment;
+    sEngenuicsImage2.u16RowSize = 25;
+    sEngenuicsImage2.u16ColumnSize = 25;
+    //UserApp1_Draw(FALSE, &aau8EngenuicsLogoBlackQ1[0][0], &sEngenuicsImage2);
 
     sEngenuicsImage.u16RowStart = U16_LCD_ROWS - 25 - anim_increment;
     sEngenuicsImage.u16ColumnStart = 40;
     sEngenuicsImage.u16RowSize = 25;
     sEngenuicsImage.u16ColumnSize = 25;
-    UserApp1_Draw(TRUE, &aau8EngenuicsLogoBlackQ1[0][0], &sEngenuicsImage);
-
-    LcdManualMode();
+    UserApp1_Draw(FALSE, &aau8EngenuicsLogoBlackQ1[0][0], &sEngenuicsImage);
 
     anim_increment++;
-  } 
-
-  if (anim_increment2 <= 20 && counter == 0){
-    LcdClearPixels(&G_sLcdClearWholeScreen);
-
-    counter = U16_ANIM_PERIODMS;
+  } else if (anim_increment2 <= 30 /*&& counter == 0*/){
+    //counter = U16_ANIM_JUMP_PERIODMS;
 
     sEngenuicsImage.u16RowStart = (U16_LCD_ROWS - 25 - anim_increment) + anim_increment2;
     sEngenuicsImage.u16ColumnStart = 40;
     sEngenuicsImage.u16RowSize = 25;
     sEngenuicsImage.u16ColumnSize = 25;
-    UserApp1_Draw(TRUE, &aau8EngenuicsLogoBlackQ1[0][0], &sEngenuicsImage);
-
-    LcdManualMode();
-
+    UserApp1_Draw(FALSE, &aau8EngenuicsLogoBlackQ1[0][0], &sEngenuicsImage);
+    
     anim_increment2++;
-  }
+  } /*else {
+    // If in between counter cycles, draw at current position but don't change anim_increment
+    if (anim_increment <= 20){
+      sEngenuicsImage.u16RowStart = U16_LCD_ROWS - 25 - anim_increment;
+      sEngenuicsImage.u16ColumnStart = 40;
+      sEngenuicsImage.u16RowSize = 25;
+      sEngenuicsImage.u16ColumnSize = 25;
+      UserApp1_Draw(FALSE, &aau8EngenuicsLogoBlackQ1[0][0], &sEngenuicsImage);
+    } else if (anim_increment2 <= 20) {
+      sEngenuicsImage.u16RowStart = (U16_LCD_ROWS - 25 - anim_increment) + anim_increment2;
+      sEngenuicsImage.u16ColumnStart = 40;
+      sEngenuicsImage.u16RowSize = 25;
+      sEngenuicsImage.u16ColumnSize = 25;
+      UserApp1_Draw(FALSE, &aau8EngenuicsLogoBlackQ1[0][0], &sEngenuicsImage);
+    }
+  }*/
 
-  if (anim_increment >= 20 && anim_increment2 >= 20){
-    UserApp1_pfStateMachine = UserApp1SM_Idle;
+  if (anim_increment >= 30 && anim_increment2 >= 30){
+    *jumping = FALSE;
     anim_increment = 0;
     anim_increment2 = 0;
   }
 }
 
-static void UserApp1SM_MoveBackground(void) {
-  PixelBlockType sEngenuicsImage;
-  PixelBlockType sEngenuicsImageStationary;
-  PixelBlockType G_sLcdClearWholeScreen = 
-  {
-    .u16RowStart = 0,
-    .u16ColumnStart = 0,
-    .u16RowSize = U16_LCD_ROWS,
-    .u16ColumnSize = U16_LCD_COLUMNS
-  };
+static u16 UserApp1_MoveBackground(void) {
+  static PixelBlockType sEngenuicsImage;
+  static PixelBlockType sEngenuicsImageStationary;
 
   extern const u8 aau8EngenuicsLogoBlackQ1[U8_LCD_IMAGE_ROW_SIZE_25PX][U8_LCD_IMAGE_COL_BYTES_25PX];
 
   static u8 u8RowPosition = 0;
 
   static int anim_increment = 0;
-  static int anim_increment2 = 0;
-  static u16 counter = U16_ANIM_PERIODMS;
 
-  counter--;
-
-  if (anim_increment <= 20 && counter == 0){
-    LcdClearPixels(&G_sLcdClearWholeScreen);
-    // Reset the 500ms counter
-    counter = U16_ANIM_PERIODMS;
-
-    sEngenuicsImageStationary.u16RowStart = U16_LCD_ROWS - 25;
-    sEngenuicsImageStationary.u16ColumnStart = 50;
-    sEngenuicsImageStationary.u16RowSize = 25;
-    sEngenuicsImageStationary.u16ColumnSize = 25;
-
-    UserApp1_Draw(FALSE, &aau8EngenuicsLogoBlackQ1[0][0], &sEngenuicsImageStationary);
-
+  if (anim_increment <= 60){
     sEngenuicsImage.u16RowStart = U16_LCD_ROWS - 25;
     sEngenuicsImage.u16ColumnStart = U16_LCD_COLUMNS - 25 - anim_increment;
     sEngenuicsImage.u16RowSize = 25;
     sEngenuicsImage.u16ColumnSize = 25;
-    UserApp1_Draw(TRUE, &aau8EngenuicsLogoBlackQ1[0][0], &sEngenuicsImage);
-
-    LcdManualMode();
+    UserApp1_Draw(FALSE, &aau8EngenuicsLogoBlackQ1[0][0], &sEngenuicsImage);
 
     anim_increment++;
   } 
   
-  if (anim_increment >= 20){
-    UserApp1_pfStateMachine = UserApp1SM_Idle;
+  if (anim_increment >= 60){
     anim_increment = 0;
   }
+
+  return sEngenuicsImage.u16ColumnStart;
 }
 
 /*-------------------------------------------------------------------------------------------------------------------*/

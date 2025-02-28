@@ -38,6 +38,9 @@ Function Declarations
 void UserApp1Initialize(void);
 void UserApp1RunActiveState(void);
 
+static void UserApp1_Draw(bool, u8*, PixelBlockType*);
+static void UserApp1_Jump(bool* jumping);
+static void UserApp1_MoveBackground(void);
 
 /*------------------------------------------------------------------------------------------------------------------*/
 /*! @privatesection */                                                                                            
@@ -47,11 +50,9 @@ void UserApp1RunActiveState(void);
 /***********************************************************************************************************************
 State Machine Declarations
 ***********************************************************************************************************************/
-static void UserApp1SM_Idle(void);    
-static void UserApp1SM_Error(void);         
-static void UserApp1SM_Jump(void);
-static void UserApp1SM_MoveBackground(void);
-static void UserApp1_Draw(bool, u8*, PixelBlockType*);
+static void UserApp1SM_GameLoop(void);    
+static void UserApp1SM_Error(void);
+static void UserApp1SM_Intro();
 
 
 /**********************************************************************************************************************
